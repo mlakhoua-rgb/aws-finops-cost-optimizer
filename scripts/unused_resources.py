@@ -9,7 +9,7 @@ and old EBS snapshots.
 Usage:
     python unused_resources.py --region us-east-1 --output unused.json
 
-Author: Mohamed Ben Lakhoua (AI-Augmented with Manus AI)
+Author: Mohamed Ben Lakhoua
 License: MIT
 """
 

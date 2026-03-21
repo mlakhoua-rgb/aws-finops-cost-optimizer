@@ -5,7 +5,7 @@ AWS EC2 Instance Scheduler Lambda Function
 This Lambda function stops and starts EC2 instances based on tags to reduce costs.
 It can be triggered by CloudWatch Events on a schedule.
 
-Author: Mohamed Ben Lakhoua (AI-Augmented with Manus AI)
+Author: Mohamed Ben Lakhoua
 License: MIT
 """
 

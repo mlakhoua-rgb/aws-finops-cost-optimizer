@@ -5,7 +5,7 @@ AWS Auto-Tagger Lambda Function
 This Lambda function automatically tags untagged EC2 instances and EBS volumes
 to enforce tagging policies and improve cost allocation.
 
-Author: Mohamed Ben Lakhoua (AI-Augmented with Manus AI)
+Author: Mohamed Ben Lakhoua
 License: MIT
 """
 

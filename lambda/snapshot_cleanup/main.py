@@ -5,7 +5,7 @@ AWS EBS Snapshot Cleanup Lambda Function
 This Lambda function identifies and deletes old EBS snapshots that exceed
 the defined retention period, reducing storage costs.
 
-Author: Mohamed Ben Lakhoua (AI-Augmented with Manus AI)
+Author: Mohamed Ben Lakhoua
 License: MIT
 """
 

@@ -9,7 +9,7 @@ spending patterns and helps identify cost optimization opportunities.
 Usage:
     python cost_analysis.py --days 30 --group-by SERVICE --output report.csv
 
-Author: Mohamed Ben Lakhoua (AI-Augmented with Manus AI)
+Author: Mohamed Ben Lakhoua
 License: MIT
 """
 
