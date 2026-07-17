@@ -63,7 +63,9 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.6.0"
+          # 1.6.x binaries carry an expired HashiCorp signing key and fail
+          # `terraform init` with "openpgp: key expired" on provider install.
+          terraform_version: "1.9.8"
 
       - name: Terraform Init
         run: terraform init -backend=false
