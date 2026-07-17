@@ -1,79 +1,105 @@
-# AWS FinOps Cost Optimizer - Architecture
+# AWS FinOps Cost Optimizer — Architecture
 
-This document provides a detailed overview of the system architecture, components, and data flow for the AWS FinOps Cost Optimizer toolkit.
+This document describes the system architecture, components, and data flow of the toolkit, and the reasoning behind the main design decisions.
 
-## Guiding Principles
+## Guiding principles
 
-The architecture is designed based on the following principles:
+- **Analysis and action are separated.** Scripts read and report; only the Lambda functions modify resources, each within a narrow, tag-scoped contract.
+- **Conservative by default.** Anything destructive starts in dry-run or opt-in mode. A cost tool that deletes the wrong resource costs more trust than it ever saves in dollars.
+- **Least privilege.** The Lambda execution role lists exactly the actions the three functions perform.
+- **Cheap to run.** The toolkit's own footprint (Lambda invocations, Cost Explorer API calls, one dashboard) is a few dollars a month.
 
-- **Modularity:** Components are loosely coupled and can be deployed independently.
-- **Scalability:** The system can scale to handle large AWS environments with many resources.
-- **Automation:** Repetitive tasks are automated to reduce manual effort and improve efficiency.
-- **Security:** The architecture follows the principle of least privilege and includes security best practices.
-- **Cost-Effectiveness:** The toolkit itself is designed to run at a very low cost.
+## System components
 
-## System Components
+```mermaid
+flowchart TB
+    subgraph Data["Data sources"]
+        CE[Cost Explorer API]
+        CW[CloudWatch metrics]
+        API[EC2 / RDS / STS APIs]
+    end
 
-The toolkit is composed of four main layers: Analysis, Automation, Monitoring, and Infrastructure.
+    subgraph Analysis["Analysis layer — scripts/ (read-only)"]
+        CA[cost_analysis.py<br/>spend by service/region/type]
+        UR[unused_resources.py<br/>waste findings + $ estimates]
+        RS[rightsizing_recommendations.py<br/>CPU + memory utilization]
+        CC[commitment_coverage.py<br/>SP/RI utilization & coverage]
+    end
 
-![Architecture Diagram](https://user-images.githubusercontent.com/12345/123456789-abcdef.png)  
-*Note: A proper architecture diagram would be generated and uploaded here.*
+    subgraph Automation["Automation layer — lambda/ (EventBridge-scheduled)"]
+        AT[auto_tagger<br/>hourly]
+        SCH[scheduler<br/>weekday stop/start]
+        SC[snapshot_cleanup<br/>daily, dry-run default]
+    end
 
-### 1. Analysis Layer
+    subgraph Monitoring["Monitoring layer"]
+        BUD[AWS Budgets]
+        CAD[Cost Anomaly Detection]
+        DASH[CloudWatch dashboard]
+        SNS[SNS topic → email]
+    end
 
-This layer is responsible for querying AWS cost and usage data and identifying optimization opportunities.
+    subgraph Infra["Infrastructure layer — terraform/"]
+        TF[Root module: S3, SNS, IAM,<br/>budget, anomaly monitor]
+        MOD[lambda module: functions,<br/>EventBridge rules, log groups]
+    end
 
-- **Python Scripts:** A collection of scripts located in the `scripts/` directory.
-  - `cost_analysis.py`: Queries the AWS Cost Explorer API to generate detailed cost reports.
-  - `unused_resources.py`: Identifies idle or unattached resources like EC2 instances, EBS volumes, and Elastic IPs.
-  - `rightsizing_recommendations.py`: Analyzes CloudWatch metrics to suggest more appropriate EC2 instance sizes.
-- **AWS Cost Explorer API:** The primary data source for all cost and usage information.
+    CE --> CA & CC
+    CW --> UR & RS
+    API --> UR
+    AT & SCH & SC --> API
+    AT & SCH & SC -- run summaries --> SNS
+    BUD & CAD -- alerts --> SNS
+    TF --> MOD
+```
 
-### 2. Automation Layer
+### 1. Analysis layer (`scripts/`)
 
-This layer consists of serverless functions that perform automated cost-saving actions.
+Read-only Python scripts run on demand (locally, from CI, or any scheduled runner):
 
-- **AWS Lambda Functions:** Located in the `lambda/` directory.
-  - `auto_tagger`: Scans for untagged resources and applies default tags to improve cost allocation.
-  - `scheduler`: Stops and starts EC2 instances based on a predefined schedule (e.g., outside of business hours).
-  - `snapshot_cleanup`: Deletes old EBS snapshots that are past their retention period.
-- **Amazon EventBridge (CloudWatch Events):** Used to trigger the Lambda functions on a schedule (e.g., hourly, daily).
+| Script | Question it answers | Key sources |
+|---|---|---|
+| `cost_analysis.py` | Where does the money go? | Cost Explorer `GetCostAndUsage` (paginated, aggregated across periods) |
+| `unused_resources.py` | What are we paying for that nothing uses? | EC2/RDS describes + CloudWatch utilization |
+| `rightsizing_recommendations.py` | What is over-provisioned? | CloudWatch CPU (always) + CWAgent memory (when installed) |
+| `commitment_coverage.py` | Are Savings Plans / RIs earning their keep? | Cost Explorer utilization & coverage APIs |
 
-### 3. Monitoring Layer
+Waste findings carry `EstimatedMonthlySavingsUSD` where a stable unit price exists (EBS GB-month, Elastic IP, snapshot storage); compute savings are deliberately left unquantified with a pointer to how to measure them, rather than guessed from a stale price table.
 
-This layer provides visibility into AWS spending and the effectiveness of the optimization actions.
+### 2. Automation layer (`lambda/`)
 
-- **Amazon CloudWatch:**
-  - **Dashboards:** Pre-built dashboards to visualize cost trends, spending by service, and budget adherence.
-  - **Alarms:** Proactive alerts that trigger when spending exceeds predefined thresholds.
-  - **Logs:** Centralized logging for all Lambda functions and scripts for debugging and auditing.
-- **Amazon SNS (Simple Notification Service):** Sends notifications for budget alerts and other important events to stakeholders via email or other channels.
-- **AWS Budgets:** Used to set spending limits and trigger alerts when costs exceed the budget.
+Three single-purpose Lambda functions, each triggered by EventBridge rules and each publishing an optional SNS run summary:
 
-### 4. Infrastructure Layer
+- **auto_tagger** (hourly): adds missing `Environment` / `Owner` / `CostCenter` tags to EC2 instances and EBS volumes so cost allocation reports stay usable. Never overwrites an existing tag value; a failure on one resource doesn't abort the run.
+- **scheduler** (weekday cron pair): two rules invoke the same function with `{"action": "stop"}` in the evening and `{"action": "start"}` in the morning. Only instances tagged `AutoScheduler=enabled` participate — the tag marks membership, the event decides the action, so an instance is stopped at night and started again in the morning by the same contract.
+- **snapshot_cleanup** (daily): deletes snapshots older than the retention period, except those tagged `Retain`. Ships with `DRY_RUN=true`; the operator flips it only after reviewing dry-run reports. Snapshots backing registered AMIs fail deletion with `InvalidSnapshot.InUse` and are skipped, not fatal.
 
-This layer defines and deploys all the necessary AWS resources using Infrastructure as Code.
+### 3. Monitoring layer
 
-- **Terraform:** The entire infrastructure for the toolkit is defined in Terraform code located in the `terraform/` directory.
-  - **Modules:** Reusable modules for deploying Lambda functions, IAM roles, and other components.
-  - **Environments:** Separate configurations for `dev` and `prod` environments.
-- **AWS IAM (Identity and Access Management):** Defines roles and policies with least-privilege permissions for all components.
-- **Amazon S3:** A secure, private bucket is used to store cost reports and Lambda function deployment packages.
+- **AWS Budgets** — alerts at 80% and 100% of actual spend plus 100% of *forecasted* spend, so the warning arrives before the money is gone.
+- **Cost Anomaly Detection** — per-service ML monitor with a daily digest, alerting only above a configurable dollar impact to avoid noise.
+- **CloudWatch dashboard** (`dashboards/cost_overview_dashboard.json`) — estimated charges total and by service, plus invocation/error widgets for the three optimizer Lambdas (a failed optimizer run means a savings action silently didn't happen — that must be visible).
+- **SNS topic** — single fan-out point for budget alerts, anomaly alerts, and automation run summaries.
 
-## Data Flow
+### 4. Infrastructure layer (`terraform/`)
 
-1.  **Cost Data Ingestion:** The `cost_analysis.py` script periodically queries the **AWS Cost Explorer API**.
-2.  **Report Generation:** The script processes the data and generates CSV/JSON reports, which are stored in the **S3 bucket**.
-3.  **Automated Scans:** The `unused_resources.py` and `rightsizing_recommendations.py` scripts are run (manually or via automation) to identify potential savings.
-4.  **Scheduled Automation:** **Amazon EventBridge** triggers the **Lambda functions** on a regular schedule.
-5.  **Tagging and Cleanup:** The `auto_tagger` and `snapshot_cleanup` functions scan for and act on non-compliant resources.
-6.  **Instance Scheduling:** The `scheduler` function stops or starts instances based on their tags.
-7.  **Monitoring and Alerting:** **AWS Budgets** and **CloudWatch Alarms** continuously monitor spending. If a threshold is breached, an alert is sent to an **SNS topic**, which then notifies the configured subscribers (e.g., via email).
-8.  **Visualization:** Users can view cost trends and metrics on the **CloudWatch Dashboards**.
+- Root module: S3 report bucket (encrypted, versioned, public-access-blocked, lifecycle-expired), SNS topic, least-privilege IAM role, budget, anomaly monitor + subscription.
+- `modules/lambda`: packages each function directory with `archive_file`, deploys the functions, EventBridge rules/targets/permissions, and per-function log groups with retention.
+- Lambda environment intentionally does **not** set `AWS_REGION` — it is a reserved variable the runtime provides; setting it fails deployment.
+- The budget uses a fixed `time_period_start` rather than `timestamp()` to avoid a perpetual plan diff.
 
-## Security Considerations
+## Security considerations
 
-- **Least Privilege:** All IAM roles for Lambda functions and other services are scoped with the minimum necessary permissions.
-- **Encryption:** The S3 bucket for reports and the SNS topics are encrypted at rest.
-- **Network Security:** Lambda functions run within the AWS network. If they need to access resources in a VPC, they can be configured with VPC access.
-- **Code Security:** The Python scripts and Terraform code can be scanned with static analysis tools (e.g., `bandit`, `tfsec`) to identify potential security issues.
+- **IAM:** the Lambda role's policy grants only `logs:*` (scoped to this project's log groups), the specific `ec2:Describe*`/`StartInstances`/`StopInstances`/`CreateTags`/`DeleteSnapshot` actions, and `sns:Publish` scoped to the alert topic.
+- **Encryption:** S3 bucket uses SSE; SNS topic uses the AWS-managed KMS key.
+- **No secrets in code:** everything comes from IAM roles or Terraform variables; nothing sensitive is logged.
+- **Static analysis:** CI runs `bandit` (fails on medium+ severity) and `terraform validate`/`fmt` on every change.
+
+## Deliberate limitations
+
+Honest scope notes rather than aspirations:
+
+- Memory-based rightsizing requires the CloudWatch Agent; without it, instances are analyzed on CPU only and clearly labeled as such.
+- Idle EC2/RDS compute savings are not auto-quantified (instance pricing varies by region/OS/purchase option); findings say so instead of guessing.
+- Single-account scope. Multi-account rollout would run the analysis with AWS Organizations + cross-account roles and aggregate per-account reports — a natural extension, not yet built.
+- The scheduler assumes UTC cron expressions; time-zone-aware scheduling per instance would need a tag schema extension.

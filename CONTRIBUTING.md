@@ -21,14 +21,22 @@ We welcome pull requests! Please follow these steps:
 3. Make your changes and commit them with a clear, descriptive message.
 4. Ensure your code adheres to the existing style and includes tests where applicable.
 5. Push your branch to your fork (`git push origin feature/my-new-feature`).
-6. Open a pull request against the `main` branch of this repository.
+6. Open a pull request against the `master` branch of this repository.
+
+Before opening the PR, run the same checks CI runs:
+
+```bash
+pip install -r requirements-dev.txt
+flake8 scripts/ lambda/ tests/ --max-line-length=120 --extend-ignore=E203
+mypy scripts/ --ignore-missing-imports --no-strict-optional
+pytest tests/ -v
+```
 
 ## Styleguides
 
 ### Python Code
-- Follow the [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide.
-- Use `black` for code formatting.
-- Add type hints to your functions.
+- Follow the [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide (checked with `flake8`, max line length 120).
+- Add type hints to your functions (checked with `mypy`).
 - Write clear, concise comments where necessary.
 
 ### Terraform Code
@@ -41,4 +49,4 @@ We welcome pull requests! Please follow these steps:
 - Example: `feat: add support for spot instance recommendations`
 
 ## Code of Conduct
-This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [mo@metafive.one](mailto:mo@metafive.one).
+Be respectful and constructive. Please report unacceptable behavior to [mo@metafive.one](mailto:mo@metafive.one).

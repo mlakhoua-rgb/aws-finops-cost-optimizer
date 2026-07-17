@@ -1,152 +1,105 @@
-# AWS FinOps Cost Optimizer - Deployment Guide
+# AWS FinOps Cost Optimizer — Deployment Guide
 
-This guide provides step-by-step instructions for deploying the AWS FinOps Cost Optimizer toolkit using Terraform.
+Step-by-step instructions for deploying the toolkit with Terraform.
 
 ## Prerequisites
 
-Before you begin, ensure you have the following prerequisites installed and configured:
+- **AWS account** with permissions to create IAM roles, Lambda functions, EventBridge rules, S3 buckets, SNS topics, budgets, and Cost Explorer anomaly monitors.
+- **AWS CLI** configured (`aws configure` or environment variables).
+- **Terraform** ≥ 1.6.0.
+- **Python** 3.11+ (only needed for running the analysis scripts).
 
-- **AWS Account:** An active AWS account with administrative or sufficient IAM permissions.
-- **AWS CLI:** The AWS Command Line Interface, configured with your credentials. You can configure it by running `aws configure`.
-- **Terraform:** Terraform version 1.6.0 or later.
-- **Git:** To clone the repository.
-- **Python:** Python 3.11 or later.
-
-## Deployment Steps
-
-### Step 1: Clone the Repository
-
-Clone this repository to your local machine:
+## Step 1: Clone the repository
 
 ```bash
 git clone https://github.com/mlakhoua-rgb/aws-finops-cost-optimizer.git
 cd aws-finops-cost-optimizer
 ```
 
-### Step 2: Configure the Terraform Backend (Optional, but Recommended)
+## Step 2 (recommended): Configure a remote state backend
 
-For production use, it is highly recommended to configure a remote backend to store the Terraform state file securely. This example uses an S3 bucket.
-
-1.  **Create an S3 Bucket:** Create a unique S3 bucket to store your Terraform state.
-
-    ```bash
-    aws s3 mb s3://your-terraform-state-bucket-name
-    ```
-
-2.  **Enable Versioning:** Enable versioning on the bucket to keep a history of your state files.
-
-    ```bash
-    aws s3api put-bucket-versioning --bucket your-terraform-state-bucket-name --versioning-configuration Status=Enabled
-    ```
-
-3.  **Configure the Backend:** Uncomment and update the `backend "s3"` block in `terraform/main.tf` with your bucket name and desired key.
-
-    ```hcl
-    terraform {
-      # ...
-      backend "s3" {
-        bucket = "your-terraform-state-bucket-name"
-        key    = "finops/terraform.tfstate"
-        region = "us-east-1"
-        encrypt = true
-      }
-    }
-    ```
-
-### Step 3: Prepare the Terraform Configuration
-
-Navigate to the development environment directory and create a configuration file.
+For anything beyond a personal sandbox, store Terraform state remotely:
 
 ```bash
-cd terraform/environments/dev
+aws s3 mb s3://your-terraform-state-bucket-name
+aws s3api put-bucket-versioning --bucket your-terraform-state-bucket-name \
+  --versioning-configuration Status=Enabled
+```
 
-# Copy the example configuration file
+Then uncomment and fill in the `backend "s3"` block in `terraform/main.tf`.
+
+## Step 3: Configure variables
+
+```bash
+cd terraform
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Now, edit the `terraform.tfvars` file with your specific values. You must provide your email address for the `owner_email` and `alert_email` variables.
+Edit `terraform.tfvars`. The one required variable is `owner_email`; the ones worth thinking about:
 
-```hcl
-# terraform.tfvars
+| Variable | Effect | Default |
+|---|---|---|
+| `alert_email` | Receives budget alerts, anomaly alerts, and automation run summaries. Empty string disables email. | `""` |
+| `monthly_budget_limit` | USD budget; alerts at 80%/100% actual and 100% forecasted. 0 disables. | `0` |
+| `anomaly_threshold_usd` | Minimum anomaly impact that triggers an alert | `10` |
+| `scheduler_stop_schedule` / `scheduler_start_schedule` | UTC cron pair for the EC2 scheduler | weekdays 19:00 / 07:00 |
+| `snapshot_retention_days` | Snapshot age threshold for cleanup | `30` |
+| `snapshot_dry_run` | Keep `true` until you've reviewed dry-run reports | `true` |
 
-aws_region           = "us-east-1"
-environment          = "dev"
-project_name         = "aws-finops-optimizer"
-owner_email          = "your-email@example.com"
-alert_email          = "your-email@example.com"
-monthly_budget_limit = 100 # Set your desired budget in USD
-# ... other variables
-```
-
-### Step 4: Deploy the Infrastructure
-
-Now you can deploy the entire toolkit using Terraform.
-
-1.  **Initialize Terraform:** This will download the necessary providers and configure the backend.
-
-    ```bash
-    terraform init
-    ```
-
-2.  **Plan the Deployment:** This command shows you what resources Terraform will create, change, or destroy. It's a good practice to review the plan before applying it.
-
-    ```bash
-    terraform plan
-    ```
-
-3.  **Apply the Configuration:** This command will create all the AWS resources defined in the Terraform code.
-
-    ```bash
-    terraform apply
-    ```
-
-    Terraform will ask for confirmation. Type `yes` and press Enter.
-
-After the deployment is complete, Terraform will output the names of the created S3 bucket, SNS topic, and the ARN of the Lambda execution role.
-
-### Step 5: Verify the Deployment
-
-1.  **Check AWS Console:** Log in to your AWS Management Console and verify that the following resources have been created:
-    -   An S3 bucket for reports.
-    -   An SNS topic for alerts.
-    -   IAM roles for Lambda execution.
-    -   Lambda functions for `auto-tagger`, `scheduler`, and `snapshot-cleanup`.
-    -   CloudWatch EventBridge rules to trigger the Lambda functions.
-    -   An AWS Budget for cost monitoring.
-
-2.  **Check Lambda Functions:** Navigate to the Lambda console and inspect the newly created functions. You can view their configuration, environment variables, and associated triggers.
-
-3.  **Check CloudWatch:** Go to the CloudWatch console to see the log groups for the Lambda functions and the budget alarm that was created.
-
-## Post-Deployment: Using the Toolkit
-
-Once deployed, the toolkit will start working automatically based on the schedules you've configured.
-
-- **Automated Actions:** The Lambda functions will run on their defined schedules to tag resources, stop/start instances, and clean up snapshots.
-- **Cost Analysis:** You can run the Python scripts in the `scripts/` directory manually to perform on-demand cost analysis.
-- **Alerts:** You will receive email notifications from SNS if your spending exceeds the budget thresholds you defined.
-
-### Running the Analysis Scripts
-
-To run the analysis scripts, you'll need to install the Python dependencies first:
+## Step 4: Deploy
 
 ```bash
-cd ../../../scripts
-pip install -r requirements.txt
-
-# Example: Get a cost report for the last 7 days
-python cost_analysis.py --days 7 --output cost_report.csv
+terraform init
+terraform plan    # review what will be created
+terraform apply
 ```
 
-## Destroying the Infrastructure
+Outputs include the report bucket name, SNS topic ARN, and deployed Lambda function names.
 
-If you want to remove all the resources created by this toolkit, you can use the `terraform destroy` command.
+## Step 5: Confirm subscriptions and verify
 
-**Warning:** This action is irreversible and will delete all the created resources, including the S3 bucket with your reports.
+1. **Confirm the SNS email subscription** — check `alert_email`'s inbox for the AWS confirmation link (alerts don't flow until confirmed).
+2. **Lambda console** — the three functions (`<project_name>-auto-tagger`, `-scheduler`, `-snapshot-cleanup`) exist with EventBridge triggers attached.
+3. **Smoke-test the scheduler contract** — tag a disposable instance `AutoScheduler=enabled`, then invoke the scheduler manually:
+   ```bash
+   aws lambda invoke --function-name aws-finops-optimizer-scheduler \
+     --payload '{"action": "stop"}' --cli-binary-format raw-in-base64-out /dev/stdout
+   ```
+4. **Snapshot cleanup dry run** — invoke it and read the log output; nothing is deleted while `DRY_RUN=true`.
+
+## Step 6: Import the CloudWatch dashboard
+
+Billing metrics only exist in us-east-1 and require **Receive Billing Alerts** to be enabled in Billing preferences:
 
 ```bash
-cd terraform/environments/dev
+aws cloudwatch put-dashboard --dashboard-name FinOps-Overview \
+  --dashboard-body file://../dashboards/cost_overview_dashboard.json --region us-east-1
+```
+
+## Step 7: Run the analysis scripts
+
+```bash
+cd ../
+pip install -r scripts/requirements.txt
+
+python scripts/cost_analysis.py --days 30 --group-by SERVICE --output report.csv
+python scripts/unused_resources.py --region us-east-1 --output unused.json
+python scripts/commitment_coverage.py --days 30 --output commitments.json
+```
+
+## Enabling destructive cleanup (deliberate step)
+
+After several dry-run reports look right:
+
+1. Set `snapshot_dry_run = false` in `terraform.tfvars`.
+2. `terraform apply`.
+3. Watch the next daily run's SNS summary; snapshots tagged `Retain` are always preserved.
+
+## Destroying the infrastructure
+
+```bash
+cd terraform
 terraform destroy
 ```
 
-Terraform will ask for confirmation. Type `yes` and press Enter.
+**Warning:** irreversible; also deletes the report bucket contents. The Terraform-managed resources are only the toolkit itself — your workload resources are never managed here.
