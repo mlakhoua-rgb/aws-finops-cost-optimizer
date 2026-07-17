@@ -1,13 +1,7 @@
 """
 Unit tests for cost_analysis.py
-Uses moto to mock AWS Cost Explorer API.
 """
-import pytest
-from unittest.mock import MagicMock, patch
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
+from unittest.mock import MagicMock
 
 from cost_analysis import CostAnalyzer
 
@@ -65,6 +59,59 @@ class TestCostAnalyzer:
         assert top["Value"] == "Amazon EC2"
         assert top["Cost"] == 1500.50
         assert top["Currency"] == "USD"
+
+    def test_pagination_merges_all_pages(self):
+        """Large accounts paginate via NextPageToken — all pages must be read."""
+        page1 = {
+            "ResultsByTime": [{
+                "TimePeriod": {"Start": "2026-02-01", "End": "2026-03-01"},
+                "Groups": [{
+                    "Keys": ["Amazon EC2"],
+                    "Metrics": {"UnblendedCost": {"Amount": "100.00", "Unit": "USD"}},
+                }],
+            }],
+            "NextPageToken": "token-1",
+        }
+        page2 = {
+            "ResultsByTime": [{
+                "TimePeriod": {"Start": "2026-03-01", "End": "2026-04-01"},
+                "Groups": [{
+                    "Keys": ["Amazon S3"],
+                    "Metrics": {"UnblendedCost": {"Amount": "50.00", "Unit": "USD"}},
+                }],
+            }],
+        }
+        self.analyzer.client.get_cost_and_usage.side_effect = [page1, page2]
+        records = self.analyzer.analyze_costs(days=60)
+        assert {r["Value"] for r in records} == {"Amazon EC2", "Amazon S3"}
+        assert self.analyzer.client.get_cost_and_usage.call_count == 2
+        second_call = self.analyzer.client.get_cost_and_usage.call_args_list[1]
+        assert second_call.kwargs["NextPageToken"] == "token-1"
+
+    def test_multi_period_costs_aggregate_per_service(self):
+        """A window spanning two calendar months yields one row per service, summed."""
+        response = {
+            "ResultsByTime": [
+                {
+                    "TimePeriod": {"Start": "2026-02-15", "End": "2026-03-01"},
+                    "Groups": [{
+                        "Keys": ["Amazon EC2"],
+                        "Metrics": {"UnblendedCost": {"Amount": "100.00", "Unit": "USD"}},
+                    }],
+                },
+                {
+                    "TimePeriod": {"Start": "2026-03-01", "End": "2026-03-15"},
+                    "Groups": [{
+                        "Keys": ["Amazon EC2"],
+                        "Metrics": {"UnblendedCost": {"Amount": "150.00", "Unit": "USD"}},
+                    }],
+                },
+            ]
+        }
+        self.analyzer.client.get_cost_and_usage.return_value = response
+        records = self.analyzer.analyze_costs(days=30)
+        assert len(records) == 1
+        assert records[0]["Cost"] == 250.00
 
     def test_calculate_total_cost(self):
         records = self.analyzer.analyze_costs(days=30)
