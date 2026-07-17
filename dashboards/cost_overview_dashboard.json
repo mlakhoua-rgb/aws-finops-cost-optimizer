@@ -113,7 +113,7 @@
       "width": 12,
       "height": 6,
       "properties": {
-        "markdown": "## Reading this dashboard\n* **Month-to-date trend** resets to zero at the start of each billing period — a flat line mid-month means no new spend accrued.\n* **By-service lines** highlight which service drives growth; correlate spikes with deployments before assuming waste.\n* **Lambda errors** should stay at zero — a non-zero errors line means an optimizer run failed and its savings action did not happen.\n* Update the `FunctionName` dimensions if you changed `project_name` in Terraform."
+        "markdown": "## Reading this dashboard\n* **Month-to-date trend** resets to zero at the start of each billing period — a flat line mid-month means no new spend accrued.\n* **By-service lines** highlight which service drives growth; correlate spikes with deployments before assuming waste.\n* **Lambda errors** should stay at zero — a non-zero errors line means an optimizer run failed and its savings action did not happen.\n* Update the `FunctionName` dimensions if you changed `project_name` in Terraform, and set the two Lambda widgets' `region` to your deployment region if you deployed outside us-east-1 — Lambda metrics live where the functions run; only the billing widgets are pinned to us-east-1."
       }
     }
   ]

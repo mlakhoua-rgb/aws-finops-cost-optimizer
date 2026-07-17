@@ -59,22 +59,36 @@ class TestSavingsPlansUtilization:
 
 class TestSavingsPlansCoverage:
 
-    def test_averages_monthly_coverage(self):
+    def test_coverage_is_weighted_by_eligible_spend(self):
+        """A near-empty month at 100% must not mask a high-spend month at 0%
+        (an arithmetic mean of the monthly percentages would report 50%)."""
         analyzer = _analyzer()
         analyzer.client.get_savings_plans_coverage.return_value = {
             "SavingsPlansCoverages": [
-                {"Coverage": {"CoveragePercentage": "40.0", "OnDemandCost": "600"}},
-                {"Coverage": {"CoveragePercentage": "60.0", "OnDemandCost": "400"}},
+                {"Coverage": {"CoveragePercentage": "100.0", "TotalCost": "100",
+                              "SpendCoveredBySavingsPlans": "100", "OnDemandCost": "0"}},
+                {"Coverage": {"CoveragePercentage": "0.0", "TotalCost": "900",
+                              "SpendCoveredBySavingsPlans": "0", "OnDemandCost": "900"}},
             ]
         }
         result = analyzer.savings_plans_coverage(days=60)
-        assert result["AverageCoveragePercentage"] == 50.0
-        assert result["UncoveredOnDemandCostUSD"] == 1000.0
+        assert result["CoveragePercentage"] == 10.0
+        assert result["UncoveredOnDemandCostUSD"] == 900.0
 
     def test_empty_response_returns_none(self):
         analyzer = _analyzer()
         analyzer.client.get_savings_plans_coverage.return_value = {
             "SavingsPlansCoverages": []
+        }
+        assert analyzer.savings_plans_coverage(days=30) is None
+
+    def test_zero_eligible_spend_returns_none(self):
+        analyzer = _analyzer()
+        analyzer.client.get_savings_plans_coverage.return_value = {
+            "SavingsPlansCoverages": [
+                {"Coverage": {"CoveragePercentage": "0.0", "TotalCost": "0",
+                              "SpendCoveredBySavingsPlans": "0", "OnDemandCost": "0"}},
+            ]
         }
         assert analyzer.savings_plans_coverage(days=30) is None
 
@@ -139,7 +153,7 @@ class TestObservations:
         report = {
             "SavingsPlans": {
                 "Utilization": {"UtilizationPercentage": 99.0, "UnusedCommitmentUSD": 1.0},
-                "Coverage": {"AverageCoveragePercentage": 85.0, "UncoveredOnDemandCostUSD": 50.0},
+                "Coverage": {"CoveragePercentage": 85.0, "UncoveredOnDemandCostUSD": 50.0},
             },
             "ReservedInstances": {
                 "Utilization": {"UtilizationPercentage": 98.0, "UnusedHours": 2.0,

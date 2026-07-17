@@ -157,12 +157,14 @@ This deploys:
 | Cost Anomaly Detection | Per-service ML monitor, daily digest | Alerts only above `anomaly_threshold_usd` |
 | S3 report bucket | Encrypted, versioned, public access blocked | Reports auto-expire (the cost tool shouldn't hoard storage) |
 
-Import the CloudWatch dashboard (billing metrics live in us-east-1):
+Import the CloudWatch dashboard (billing metrics live in us-east-1; the path is relative to the `terraform/` directory the deployment block above ran in):
 
 ```bash
 aws cloudwatch put-dashboard --dashboard-name FinOps-Overview \
-  --dashboard-body file://dashboards/cost_overview_dashboard.json --region us-east-1
+  --dashboard-body file://../dashboards/cost_overview_dashboard.json --region us-east-1
 ```
+
+If you deploy to a region other than us-east-1, edit the two Lambda widgets' `region` in the dashboard JSON first — Lambda metrics live in the deployment region, unlike billing metrics.
 
 Full walkthrough: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) · Common issues: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
