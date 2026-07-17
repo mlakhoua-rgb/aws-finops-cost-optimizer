@@ -221,7 +221,7 @@ This toolkit is developed AI-assisted (Claude and other coding agents) with huma
 
 **Author:** Mohamed Ben Lakhoua
 **LinkedIn:** [linkedin.com/in/benlakhoua](https://linkedin.com/in/benlakhoua)
-**Email:** mo@metafive.one
+**Email:** Mohamed@metafive.ai
 **GitHub:** [github.com/mlakhoua-rgb](https://github.com/mlakhoua-rgb)
 
 *Last updated: July 2026*

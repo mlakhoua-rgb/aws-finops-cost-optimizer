@@ -49,4 +49,4 @@ pytest tests/ -v
 - Example: `feat: add support for spot instance recommendations`
 
 ## Code of Conduct
-Be respectful and constructive. Please report unacceptable behavior to [mo@metafive.one](mailto:mo@metafive.one).
+Be respectful and constructive. Please report unacceptable behavior to [Mohamed@metafive.ai](mailto:Mohamed@metafive.ai).
