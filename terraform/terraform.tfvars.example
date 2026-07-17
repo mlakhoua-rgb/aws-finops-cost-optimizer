@@ -1,0 +1,44 @@
+# AWS FinOps Cost Optimizer - Example Configuration
+# Copy to terraform.tfvars and adjust for your account.
+
+aws_region   = "us-east-1"
+environment  = "dev"
+project_name = "aws-finops-optimizer"
+
+# Required: resource owner recorded on every deployed resource
+owner_email = "you@example.com"
+
+# Alerts (budget breaches, cost anomalies, automation run summaries).
+# Leave empty to disable email subscriptions.
+alert_email = "you@example.com"
+
+# Monthly budget in USD; 0 disables the budget and its alerts.
+monthly_budget_limit = 100
+
+# Cost Anomaly Detection: minimum anomaly impact (USD) that triggers an alert.
+anomaly_threshold_usd = 10
+
+# Automation toggles
+enable_auto_tagging     = true
+enable_scheduler        = true
+enable_snapshot_cleanup = true
+
+# EC2 scheduler windows (UTC). Instances opt in via tag AutoScheduler=enabled.
+scheduler_stop_schedule  = "cron(0 19 ? * MON-FRI *)" # weekdays 19:00 UTC
+scheduler_start_schedule = "cron(0 7 ? * MON-FRI *)"  # weekdays 07:00 UTC
+
+# Snapshot cleanup: snapshots older than this are eligible. Dry run is the
+# default — flip to false only after reviewing a few dry-run reports.
+snapshot_retention_days = 30
+snapshot_dry_run        = true
+
+# Tags applied by the auto-tagger when missing
+default_tags = {
+  Environment = "Untagged"
+  Owner       = "Unknown"
+  CostCenter  = "Unallocated"
+}
+
+# Housekeeping
+log_retention_days    = 30
+report_retention_days = 365

@@ -22,16 +22,16 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install -r scripts/requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Lint — flake8
-        run: flake8 scripts/ lambda/ --max-line-length=120 --extend-ignore=E203
+        run: flake8 scripts/ lambda/ tests/ --max-line-length=120 --extend-ignore=E203
 
       - name: Type check — mypy
         run: mypy scripts/ --ignore-missing-imports --no-strict-optional
 
       - name: Unit tests
-        run: pytest tests/ -v --cov=scripts --cov-report=term-missing
+        run: pytest tests/ -v --cov=scripts --cov=lambda --cov-report=term-missing
 
   security-scan:
     name: Security Scan
@@ -50,7 +50,7 @@ jobs:
         run: pip install bandit
 
       - name: Run bandit (SAST)
-        run: bandit -r scripts/ lambda/ -ll --exit-zero
+        run: bandit -r scripts/ lambda/ -ll
 
   terraform-validate:
     name: Terraform Validate
@@ -63,7 +63,9 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.6.0"
+          # 1.6.x binaries carry an expired HashiCorp signing key and fail
+          # `terraform init` with "openpgp: key expired" on provider install.
+          terraform_version: "1.9.8"
 
       - name: Terraform Init
         run: terraform init -backend=false

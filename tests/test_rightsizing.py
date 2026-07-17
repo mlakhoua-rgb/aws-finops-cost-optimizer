@@ -1,15 +1,14 @@
 """
 Unit tests for rightsizing_recommendations.py
 """
-import pytest
-from unittest.mock import MagicMock, patch, call
 from datetime import datetime, timezone
-import sys
-import os
+from unittest.mock import MagicMock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
-
-from rightsizing_recommendations import RightSizingRecommender, _max_metric, _get_memory_utilisation
+from rightsizing_recommendations import (
+    RightSizingRecommender,
+    _get_memory_utilisation,
+    _max_metric,
+)
 
 
 # ---------------------------------------------------------------------------
