@@ -10,7 +10,7 @@ variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string
   default     = "dev"
-  
+
   validation {
     condition     = contains(["dev", "staging", "prod"], var.environment)
     error_message = "Environment must be dev, staging, or prod."
@@ -44,7 +44,7 @@ variable "log_retention_days" {
   description = "CloudWatch log retention period in days"
   type        = number
   default     = 30
-  
+
   validation {
     condition     = contains([1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653], var.log_retention_days)
     error_message = "Log retention days must be a valid CloudWatch retention period."
@@ -73,6 +73,36 @@ variable "snapshot_retention_days" {
   description = "Number of days to retain EBS snapshots"
   type        = number
   default     = 30
+}
+
+variable "snapshot_dry_run" {
+  description = "When true (default), snapshot cleanup only reports what it would delete. Set to false to enable deletion."
+  type        = bool
+  default     = true
+}
+
+variable "scheduler_stop_schedule" {
+  description = "EventBridge schedule expression (UTC) for stopping opted-in EC2 instances"
+  type        = string
+  default     = "cron(0 19 ? * MON-FRI *)"
+}
+
+variable "scheduler_start_schedule" {
+  description = "EventBridge schedule expression (UTC) for starting opted-in EC2 instances"
+  type        = string
+  default     = "cron(0 7 ? * MON-FRI *)"
+}
+
+variable "anomaly_threshold_usd" {
+  description = "Minimum total cost impact (USD) of an anomaly before an alert is sent"
+  type        = number
+  default     = 10
+}
+
+variable "report_retention_days" {
+  description = "Days to keep generated cost reports in the S3 bucket before expiry"
+  type        = number
+  default     = 365
 }
 
 variable "default_tags" {

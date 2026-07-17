@@ -1,0 +1,120 @@
+{
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 2,
+      "properties": {
+        "markdown": "# AWS FinOps — Cost Overview\nBilling metrics are published to **us-east-1** only and require *Receive Billing Alerts* to be enabled in Billing preferences. Estimated charges update roughly every 6 hours.\n\nImport: `aws cloudwatch put-dashboard --dashboard-name FinOps-Overview --dashboard-body file://dashboards/cost_overview_dashboard.json --region us-east-1`"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 2,
+      "width": 6,
+      "height": 6,
+      "properties": {
+        "title": "Current Estimated Charges (USD)",
+        "view": "singleValue",
+        "region": "us-east-1",
+        "metrics": [
+          ["AWS/Billing", "EstimatedCharges", "Currency", "USD"]
+        ],
+        "stat": "Maximum",
+        "period": 21600
+      }
+    },
+    {
+      "type": "metric",
+      "x": 6,
+      "y": 2,
+      "width": 18,
+      "height": 6,
+      "properties": {
+        "title": "Estimated Charges — Month-to-Date Trend",
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "metrics": [
+          ["AWS/Billing", "EstimatedCharges", "Currency", "USD", {"label": "Total"}]
+        ],
+        "stat": "Maximum",
+        "period": 21600,
+        "yAxis": {"left": {"min": 0}}
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 8,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Estimated Charges by Service",
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "metrics": [
+          ["AWS/Billing", "EstimatedCharges", "ServiceName", "AmazonEC2", "Currency", "USD", {"label": "EC2"}],
+          ["AWS/Billing", "EstimatedCharges", "ServiceName", "AmazonRDS", "Currency", "USD", {"label": "RDS"}],
+          ["AWS/Billing", "EstimatedCharges", "ServiceName", "AmazonS3", "Currency", "USD", {"label": "S3"}],
+          ["AWS/Billing", "EstimatedCharges", "ServiceName", "AWSLambda", "Currency", "USD", {"label": "Lambda"}],
+          ["AWS/Billing", "EstimatedCharges", "ServiceName", "AmazonCloudWatch", "Currency", "USD", {"label": "CloudWatch"}],
+          ["AWS/Billing", "EstimatedCharges", "ServiceName", "AWSDataTransfer", "Currency", "USD", {"label": "Data Transfer"}]
+        ],
+        "stat": "Maximum",
+        "period": 21600,
+        "yAxis": {"left": {"min": 0}}
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 8,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Optimizer Lambdas — Invocations",
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "metrics": [
+          ["AWS/Lambda", "Invocations", "FunctionName", "aws-finops-optimizer-auto-tagger", {"label": "auto-tagger"}],
+          ["AWS/Lambda", "Invocations", "FunctionName", "aws-finops-optimizer-scheduler", {"label": "scheduler"}],
+          ["AWS/Lambda", "Invocations", "FunctionName", "aws-finops-optimizer-snapshot-cleanup", {"label": "snapshot-cleanup"}]
+        ],
+        "stat": "Sum",
+        "period": 86400
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 14,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Optimizer Lambdas — Errors",
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "metrics": [
+          ["AWS/Lambda", "Errors", "FunctionName", "aws-finops-optimizer-auto-tagger", {"label": "auto-tagger"}],
+          ["AWS/Lambda", "Errors", "FunctionName", "aws-finops-optimizer-scheduler", {"label": "scheduler"}],
+          ["AWS/Lambda", "Errors", "FunctionName", "aws-finops-optimizer-snapshot-cleanup", {"label": "snapshot-cleanup"}]
+        ],
+        "stat": "Sum",
+        "period": 86400
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 14,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "markdown": "## Reading this dashboard\n* **Month-to-date trend** resets to zero at the start of each billing period — a flat line mid-month means no new spend accrued.\n* **By-service lines** highlight which service drives growth; correlate spikes with deployments before assuming waste.\n* **Lambda errors** should stay at zero — a non-zero errors line means an optimizer run failed and its savings action did not happen.\n* Update the `FunctionName` dimensions if you changed `project_name` in Terraform."
+      }
+    }
+  ]
+}
