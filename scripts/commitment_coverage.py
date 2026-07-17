@@ -77,7 +77,7 @@ class CommitmentAnalyzer:
         }
 
     def savings_plans_coverage(self, days: int) -> Optional[Dict]:
-        """Return average Savings Plans coverage of eligible spend."""
+        """Return spend-weighted Savings Plans coverage of eligible spend."""
         response = self._call(
             "Savings Plans coverage",
             self.client.get_savings_plans_coverage,
@@ -89,14 +89,23 @@ class CommitmentAnalyzer:
         coverages = response.get("SavingsPlansCoverages", [])
         if not coverages:
             return None
-        percentages = [
-            float(c.get("Coverage", {}).get("CoveragePercentage", 0)) for c in coverages
-        ]
+        # Weight by eligible spend: an arithmetic mean of monthly percentages
+        # lets a near-empty month at 100% coverage mask a high-spend month at
+        # 0%, flipping the period-wide conclusion.
+        covered = sum(
+            float(c.get("Coverage", {}).get("SpendCoveredBySavingsPlans", 0))
+            for c in coverages
+        )
+        total = sum(
+            float(c.get("Coverage", {}).get("TotalCost", 0)) for c in coverages
+        )
         on_demand = sum(
             float(c.get("Coverage", {}).get("OnDemandCost", 0)) for c in coverages
         )
+        if total <= 0:
+            return None
         return {
-            "AverageCoveragePercentage": round(sum(percentages) / len(percentages), 2),
+            "CoveragePercentage": round(covered / total * 100, 2),
             "UncoveredOnDemandCostUSD": round(on_demand, 2),
         }
 
@@ -168,11 +177,11 @@ class CommitmentAnalyzer:
             )
 
         sp_cov = report["SavingsPlans"]["Coverage"]
-        if sp_cov and sp_cov["AverageCoveragePercentage"] < 60:
+        if sp_cov and sp_cov["CoveragePercentage"] < 60:
             observations.append(
-                f"Savings Plans coverage averages {sp_cov['AverageCoveragePercentage']}% — "
-                f"${sp_cov['UncoveredOnDemandCostUSD']} of eligible spend ran at "
-                "on-demand rates. If this usage is steady, model a commitment purchase."
+                f"Savings Plans cover {sp_cov['CoveragePercentage']}% of eligible spend — "
+                f"${sp_cov['UncoveredOnDemandCostUSD']} ran at on-demand rates. "
+                "If this usage is steady, model a commitment purchase."
             )
 
         ri_util = report["ReservedInstances"]["Utilization"]

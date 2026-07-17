@@ -88,9 +88,9 @@ Common issues, their causes, and fixes.
 
 ### Lambda widgets show no data
 
-**Cause:** the widget `FunctionName` dimensions assume the default `project_name` (`aws-finops-optimizer`).
+**Cause:** either the widget `FunctionName` dimensions assume the default `project_name` (`aws-finops-optimizer`), or the stack was deployed to a region other than us-east-1 — the Lambda widgets query the region set in the dashboard JSON, and Lambda metrics live in the deployment region (only billing metrics are inherently us-east-1).
 
-**Fix:** if you changed `project_name`, update the function names in `dashboards/cost_overview_dashboard.json` before importing.
+**Fix:** update the function names and/or the two Lambda widgets' `region` in `dashboards/cost_overview_dashboard.json` before importing.
 
 ## Tests
 
