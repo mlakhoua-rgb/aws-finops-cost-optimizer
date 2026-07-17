@@ -2,80 +2,109 @@
 """
 AWS Auto-Tagger Lambda Function
 
-This Lambda function automatically tags untagged EC2 instances and EBS volumes
-to enforce tagging policies and improve cost allocation.
+Automatically applies default tags to untagged EC2 instances and EBS volumes
+so that every resource carries the minimum cost-allocation tag set. Default
+tags never overwrite existing values — only missing keys are added — so the
+function is safe to run repeatedly and flags gaps rather than rewriting intent.
+
+Environment variables:
+    DEFAULT_TAGS   JSON object of tag key/value pairs to apply when missing
+                   (default: {"Environment": "Untagged", "Owner": "Unknown"})
+    SNS_TOPIC_ARN  Optional. When set, a run summary is published to this topic.
 
 Author: Mohamed Ben Lakhoua
 License: MIT
 """
 
-import boto3
-import os
 import json
-from typing import Dict, List, Any
+import os
+from typing import Any, Dict, List
+
+import boto3
+from botocore.exceptions import ClientError
 
 
 def lambda_handler(event: Dict[str, Any], context: object) -> Dict[str, Any]:
-    """Lambda function handler"""
-    region = os.environ.get("AWS_REGION", "us-east-1")
-    default_tags = json.loads(os.environ.get("DEFAULT_TAGS", 
-        json.dumps({"Environment": "Untagged", "Owner": "Unknown"})))
-    
-    ec2 = boto3.client("ec2", region_name=region)
-    
+    """Lambda function handler."""
+    default_tags: Dict[str, str] = json.loads(
+        os.environ.get("DEFAULT_TAGS", '{"Environment": "Untagged", "Owner": "Unknown"}')
+    )
+
+    ec2 = boto3.client("ec2")
+
     tagged_resources = {
         "Instances": tag_untagged_instances(ec2, default_tags),
-        "Volumes": tag_untagged_volumes(ec2, default_tags)
+        "Volumes": tag_untagged_volumes(ec2, default_tags),
     }
-    
-    return {
-        "statusCode": 200,
-        "body": json.dumps(tagged_resources)
-    }
+    total = sum(len(v) for v in tagged_resources.values())
+    publish_summary(tagged_resources, total)
 
-def tag_untagged_instances(ec2: boto3.client, default_tags: Dict[str, str]) -> List[str]:
-    """Find and tag untagged EC2 instances"""
-    tagged_instance_ids = []
+    return {"statusCode": 200, "body": json.dumps(tagged_resources)}
+
+
+def apply_missing_tags(ec2: Any, resource_id: str, existing_keys: set, default_tags: Dict[str, str]) -> bool:
+    """Add any missing default tags to a resource. Returns True if tags were added."""
+    tags_to_add = {k: v for k, v in default_tags.items() if k not in existing_keys}
+    if not tags_to_add:
+        return False
+
+    print(f"Tagging {resource_id} with: {tags_to_add}")
+    try:
+        ec2.create_tags(
+            Resources=[resource_id],
+            Tags=[{"Key": k, "Value": v} for k, v in tags_to_add.items()],
+        )
+        return True
+    except ClientError as exc:
+        # One failed resource must not abort the whole run.
+        print(f"Error tagging {resource_id}: {exc}")
+        return False
+
+
+def tag_untagged_instances(ec2: Any, default_tags: Dict[str, str]) -> List[str]:
+    """Find EC2 instances missing default tags and tag them."""
+    tagged_instance_ids: List[str] = []
     paginator = ec2.get_paginator("describe_instances")
-    pages = paginator.paginate(Filters=[{"Name": "instance-state-name", "Values": ["running", "stopped"]}])
+    pages = paginator.paginate(
+        Filters=[{"Name": "instance-state-name", "Values": ["running", "stopped"]}]
+    )
 
     for page in pages:
         for reservation in page["Reservations"]:
             for instance in reservation["Instances"]:
                 instance_id = instance["InstanceId"]
-                existing_tags = {t["Key"] for t in instance.get("Tags", [])}
-                
-                tags_to_add = {k: v for k, v in default_tags.items() if k not in existing_tags}
-                
-                if tags_to_add:
-                    print(f"Tagging instance {instance_id} with: {tags_to_add}")
-                    ec2.create_tags(
-                        Resources=[instance_id],
-                        Tags=[{"Key": k, "Value": v} for k, v in tags_to_add.items()]
-                    )
+                existing = {t["Key"] for t in instance.get("Tags", [])}
+                if apply_missing_tags(ec2, instance_id, existing, default_tags):
                     tagged_instance_ids.append(instance_id)
-                    
+
     return tagged_instance_ids
 
-def tag_untagged_volumes(ec2: boto3.client, default_tags: Dict[str, str]) -> List[str]:
-    """Find and tag untagged EBS volumes"""
-    tagged_volume_ids = []
-    paginator = ec2.get_paginator("describe_volumes")
-    pages = paginator.paginate()
 
-    for page in pages:
+def tag_untagged_volumes(ec2: Any, default_tags: Dict[str, str]) -> List[str]:
+    """Find EBS volumes missing default tags and tag them."""
+    tagged_volume_ids: List[str] = []
+    paginator = ec2.get_paginator("describe_volumes")
+
+    for page in paginator.paginate():
         for volume in page["Volumes"]:
             volume_id = volume["VolumeId"]
-            existing_tags = {t["Key"] for t in volume.get("Tags", [])}
-            
-            tags_to_add = {k: v for k, v in default_tags.items() if k not in existing_tags}
-            
-            if tags_to_add:
-                print(f"Tagging volume {volume_id} with: {tags_to_add}")
-                ec2.create_tags(
-                    Resources=[volume_id],
-                    Tags=[{"Key": k, "Value": v} for k, v in tags_to_add.items()]
-                )
+            existing = {t["Key"] for t in volume.get("Tags", [])}
+            if apply_missing_tags(ec2, volume_id, existing, default_tags):
                 tagged_volume_ids.append(volume_id)
-                
+
     return tagged_volume_ids
+
+
+def publish_summary(tagged_resources: Dict[str, List[str]], total: int) -> None:
+    """Publish a run summary to SNS when SNS_TOPIC_ARN is configured."""
+    topic_arn = os.environ.get("SNS_TOPIC_ARN", "")
+    if not topic_arn or total == 0:
+        return
+    try:
+        boto3.client("sns").publish(
+            TopicArn=topic_arn,
+            Subject=f"[FinOps] Auto-tagger applied default tags to {total} resource(s)",
+            Message=json.dumps(tagged_resources, indent=2),
+        )
+    except Exception as exc:  # notification failure must not fail the run
+        print(f"Warning: could not publish SNS summary: {exc}")
