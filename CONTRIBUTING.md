@@ -35,13 +35,13 @@ pytest tests/ -v
 ## Styleguides
 
 ### Python Code
-- Follow the [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide (checked with `flake8`, max line length 120).
+- Follow the [PEP 8](https://peps.python.org/pep-0008/) style guide (checked with `flake8`, max line length 120).
 - Add type hints to your functions (checked with `mypy`).
 - Write clear, concise comments where necessary.
 
 ### Terraform Code
 - Use the standard Terraform formatting (`terraform fmt`).
-- Follow the official [Terraform style conventions](https://www.terraform.io/docs/language/style.html).
+- Follow the official [Terraform style conventions](https://developer.hashicorp.com/terraform/language/style).
 - Use descriptive names for variables and resources.
 
 ### Commit Messages

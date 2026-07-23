@@ -90,7 +90,7 @@ Three single-purpose Lambda functions, each triggered by EventBridge rules and e
 
 ## Security considerations
 
-- **IAM:** the Lambda role's policy grants only `logs:*` (scoped to this project's log groups), the specific `ec2:Describe*`/`StartInstances`/`StopInstances`/`CreateTags`/`DeleteSnapshot` actions, and `sns:Publish` scoped to the alert topic.
+- **IAM:** the Lambda role's policy grants only `logs:CreateLogGroup`/`CreateLogStream`/`PutLogEvents` (scoped to this project's log groups), the specific `ec2:Describe*`/`StartInstances`/`StopInstances`/`CreateTags`/`DeleteSnapshot` actions, and `sns:Publish` scoped to the alert topic.
 - **Encryption:** S3 bucket uses SSE; SNS topic uses the AWS-managed KMS key.
 - **No secrets in code:** everything comes from IAM roles or Terraform variables; nothing sensitive is logged.
 - **Static analysis:** CI runs `bandit` (fails on medium+ severity) and `terraform validate`/`fmt` on every change.
