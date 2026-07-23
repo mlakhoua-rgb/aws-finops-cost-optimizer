@@ -189,7 +189,7 @@ CI runs on every push and pull request ([ci.yml](.github/workflows/ci.yml)):
 
 - **flake8** lint over `scripts/`, `lambda/`, and `tests/`
 - **mypy** type checking over `scripts/`
-- **pytest** — 69 unit tests covering the analysis scripts and all three Lambda handlers (AWS calls mocked; no account needed)
+- **pytest** — 70 unit tests covering the analysis scripts and all three Lambda handlers (AWS calls mocked; no account needed)
 - **bandit** SAST scan (medium+ severity fails the build)
 - **terraform validate** and **terraform fmt -check** over the full configuration
 
