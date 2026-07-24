@@ -4,6 +4,8 @@
 [![Terraform](https://img.shields.io/badge/Terraform-1.6+-623CE4?logo=terraform)](https://www.terraform.io/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![GitHub last commit](https://img.shields.io/github/last-commit/mlakhoua-rgb/aws-finops-cost-optimizer)](https://github.com/mlakhoua-rgb/aws-finops-cost-optimizer/commits/master)
+[![GitHub stars](https://img.shields.io/github/stars/mlakhoua-rgb/aws-finops-cost-optimizer?style=social)](https://github.com/mlakhoua-rgb/aws-finops-cost-optimizer/stargazers)
 
 A practical AWS FinOps toolkit covering the three pillars of cost optimization:
 
@@ -12,6 +14,16 @@ A practical AWS FinOps toolkit covering the three pillars of cost optimization:
 3. **Rate optimization** — pay less for what you keep (Savings Plans / Reserved Instance utilization and coverage analysis)
 
 Analysis is read-only Python; remediation is automated through Lambda with deliberately conservative defaults (dry-run first, opt-in tags, human review for anything destructive). Everything deploys with Terraform.
+
+---
+
+## Who is this for?
+
+- **Platform / cloud engineers** who want concrete, working FinOps automation rather than slideware
+- **Engineering leaders** evaluating what AI-augmented infrastructure delivery looks like with real guardrails
+- **Anyone running AWS** who suspects they're paying for idle resources (you probably are — run `unused_resources.py` and see)
+
+Every finding carries a dollar estimate where honestly estimable, so you can prioritize by impact instead of drowning in lists.
 
 ---
 
@@ -223,5 +235,9 @@ This toolkit is developed AI-assisted (Claude and other coding agents) with huma
 **LinkedIn:** [linkedin.com/in/benlakhoua](https://linkedin.com/in/benlakhoua)
 **Email:** Mohamed@metafive.ai
 **GitHub:** [github.com/mlakhoua-rgb](https://github.com/mlakhoua-rgb)
+
+---
+
+⭐ **Found a saving with this toolkit?** A star helps other engineers find it — and issues/PRs with your own findings are very welcome.
 
 *Last updated: July 2026*
