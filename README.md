@@ -221,9 +221,9 @@ pytest tests/ -v --cov=scripts --cov=lambda
 
 ---
 
-## Development approach
+## How this was built
 
-This toolkit is developed AI-assisted (Claude and other coding agents) with human review of every change — the same way I use AI in day-to-day platform work. The judgment calls are the human part: what to automate versus only report, which defaults are safe enough to ship enabled, and where a dollar estimate is honest versus misleading. CI enforces the floor: lint, types, tests, SAST, and Terraform validation on every change.
+Specified and directed by Mohamed Ben Lakhoua; built by AI coding agents against those specifications — not hand-written. I review and validate every change before it merges. The judgment calls are the human part: what to automate versus only report, which defaults are safe enough to ship enabled, and where a dollar estimate is honest versus misleading. CI enforces the floor: lint, types, tests, SAST, and Terraform validation on every change.
 
 **Disclaimer:** educational/portfolio project. Thresholds, schedules, and retention policies are examples — align them with your organization's policies before production use. No employer-specific content is included.
 
