@@ -1,5 +1,5 @@
 # AWS FinOps Cost Optimizer - Runtime Dependencies
 # Development/test tooling lives in requirements-dev.txt at the repo root.
 
-boto3>=1.34.0
+boto3>=1.43.59
 botocore>=1.34.0
