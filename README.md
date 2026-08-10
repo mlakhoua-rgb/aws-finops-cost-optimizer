@@ -233,7 +233,7 @@ Specified and directed by Mohamed Ben Lakhoua; built by AI coding agents against
 
 **Author:** Mohamed Ben Lakhoua
 **LinkedIn:** [linkedin.com/in/benlakhoua](https://linkedin.com/in/benlakhoua)
-**Email:** Mohamed@metafive.ai
+**Email:** mohamed@metafive.ai
 **GitHub:** [github.com/mlakhoua-rgb](https://github.com/mlakhoua-rgb)
 
 ---
