@@ -1,11 +1,11 @@
 # AWS FinOps Cost Optimizer
 
-[![CI](https://github.com/mlakhoua-rgb/aws-finops-cost-optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/mlakhoua-rgb/aws-finops-cost-optimizer/actions/workflows/ci.yml)
+[![CI](https://github.com/metafive-ai/aws-finops-cost-optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/metafive-ai/aws-finops-cost-optimizer/actions/workflows/ci.yml)
 [![Terraform](https://img.shields.io/badge/Terraform-1.6+-623CE4?logo=terraform)](https://www.terraform.io/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![GitHub last commit](https://img.shields.io/github/last-commit/mlakhoua-rgb/aws-finops-cost-optimizer)](https://github.com/mlakhoua-rgb/aws-finops-cost-optimizer/commits/master)
-[![GitHub stars](https://img.shields.io/github/stars/mlakhoua-rgb/aws-finops-cost-optimizer?style=social)](https://github.com/mlakhoua-rgb/aws-finops-cost-optimizer/stargazers)
+[![GitHub last commit](https://img.shields.io/github/last-commit/metafive-ai/aws-finops-cost-optimizer)](https://github.com/metafive-ai/aws-finops-cost-optimizer/commits/master)
+[![GitHub stars](https://img.shields.io/github/stars/metafive-ai/aws-finops-cost-optimizer?style=social)](https://github.com/metafive-ai/aws-finops-cost-optimizer/stargazers)
 
 A practical AWS FinOps toolkit covering the three pillars of cost optimization:
 
@@ -101,7 +101,7 @@ flowchart LR
 ## Quick start — analysis only (no deployment needed)
 
 ```bash
-git clone https://github.com/mlakhoua-rgb/aws-finops-cost-optimizer.git
+git clone https://github.com/metafive-ai/aws-finops-cost-optimizer.git
 cd aws-finops-cost-optimizer
 pip install -r scripts/requirements.txt
 
@@ -231,13 +231,13 @@ Specified and directed by Mohamed Ben Lakhoua; built by AI coding agents against
 
 ## Contact
 
-**Author:** Mohamed Ben Lakhoua
-**LinkedIn:** [linkedin.com/in/benlakhoua](https://linkedin.com/in/benlakhoua)
-**Email:** mohamed@metafive.ai
-**GitHub:** [github.com/mlakhoua-rgb](https://github.com/mlakhoua-rgb)
+**Author:** Mohamed Ben Lakhoua  
+**Org:** [github.com/metafive-ai](https://github.com/metafive-ai)  
+**LinkedIn:** [linkedin.com/in/benlakhoua](https://linkedin.com/in/benlakhoua)  
+**Email:** [mo@metafive.ai](mailto:mo@metafive.ai)
 
 ---
 
 ⭐ **Found a saving with this toolkit?** A star helps other engineers find it — and issues/PRs with your own findings are very welcome.
 
-*Last updated: July 2026*
+*Last updated: August 2026*
